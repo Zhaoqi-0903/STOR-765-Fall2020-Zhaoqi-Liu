@@ -1,0 +1,25 @@
+---
+title: "Kaplan-Meier plots"
+author: "Zhaoqi Liu"
+date: "10/13/2020"
+output: pdf_document
+---
+####input data (per patient)
+
+
+for each death and relapse 
+#### Race 
+
+
+#### Age
+
+#### ER
+
+#### PR
+
+#### HER2
+
+#### Grade
+#### Stage
+#### Menopause
+
