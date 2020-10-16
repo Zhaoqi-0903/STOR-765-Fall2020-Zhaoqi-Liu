@@ -5,7 +5,46 @@ date: "10/13/2020"
 output: pdf_document
 ---
 ####input data (per patient)
+```{r}
+library(readxl)
+LSRdf <- read_excel("Composite TMA data V4.xlsx", sheet = "LSR data")
+LSRperson<- na.omit(LSRdf)
+LSRperson1<-LSRperson
 
+Clinicaldf<-read_excel("Composite TMA data V4.xlsx", sheet = "AllClinicalInfo")
+Clinicaldf[,10]<-as.numeric(unlist(Clinicaldf[,10])) #convert types into number from character 
+Clinicaldf[,11]<-as.numeric(unlist(Clinicaldf[,11]))
+```
+
+```{r}
+#change the id number by deleting the first digit of each id, for data merging 
+id<-LSRperson1[,1]
+ID<-substring(sapply(id,as.character),2)
+LSRperson$ID<-sapply(ID,as.numeric)
+LSRperson #348 patients of LSR data, no duplicate
+```
+
+```{r}
+#select rows that the survival month is not NA
+Cperson2<-Clinicaldf[!is.na(Clinicaldf[,19]),] 
+Cperson1<-Cperson2
+id<-Cperson2[,1]
+ID<-substring(sapply(id,as.character),2)
+Cperson1$ID<-sapply(ID,as.numeric)
+#eliminate duplicate rows 
+#sum(ifelse(duplicated(Cperson1)==TRUE,1,0)) #20 duplicates
+Cperson<-Cperson1[!duplicated(Cperson1),]
+Cperson
+```
+
+```{r}
+###Merge two dataset based on ID 
+library(dplyr)
+#two obs on LSR data do not have a match on clinical data (ID 978, 1463)
+df<-left_join(Cperson,LSRperson,by = "ID")
+df
+#treat some variables as factor? 
+```
 
 for each death and relapse 
 #### Race 
