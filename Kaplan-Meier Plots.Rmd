@@ -46,8 +46,30 @@ df
 #treat some variables as factor? 
 ```
 
+```{r}
+saveRDS(df,"breastcancerdf.rds")
+```
+
+```{r}
+#install.packages("survival")
+library(survival)
+```
+
 for each death and relapse 
 #### Race 
+
+
+```{r}
+library(dplyr)
+dfrace<-df%>%select(ID,DEMO_RACE,FOLLOW_OS_EVENT_0_ALIVE_1_DEAD,FOLLOW_RELAPSEANYMONTHS,FOLLOW_RELAPSEVNT_0_NO_1_RECUR,FOLLOW_OVERALL_SURVIVAL_MONTHS)
+dfrace$DEMO_RACE<-as.factor(dfrace$DEMO_RACE)
+#dfrace$FOLLOW_OS_EVENT_0_ALIVE_1_DEAD<-as.factor(dfrace$FOLLOW_OS_EVENT_0_ALIVE_1_DEAD)
+#View(dfrace)
+RaceKM<-survfit(Surv(FOLLOW_OVERALL_SURVIVAL_MONTHS,FOLLOW_OS_EVENT_0_ALIVE_1_DEAD)~DEMO_RACE,
+          data=dfrace)
+plot(RaceKM,col=c("red","blue","yellow"))
+legend(-0.7,0.3,c("Black","Other","White"),col=c("red","blue","yellow"),fill=c("red","blue","yellow"))
+```
 
 
 #### Age
