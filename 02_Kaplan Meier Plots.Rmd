@@ -1,0 +1,62 @@
+---
+title: "Kaplan-Meier plots"
+author: "Zhaoqi Liu"
+date: "2/20/2021"
+output: html_document
+---
+
+```{r}
+bcdf<-readRDS("breastcancerdf.rds")
+```
+
+```{r}
+library(dplyr)
+```
+
+###Pre-select
+Select 8 variables that are used to draw the Kaplan Meier Plots:
+race(DEMO_RACE),age(DEMO_AGE_AT_DIAGNOSIS), ER(PATH_ER), PR(PATH_PR), HER2(PATH_HER2), grade(PATH_SURGERYOVERALLGRADE), stage, menopause(HORMO_HORMO_MENOPAUSESTATUS)  
+and 5 death and relapse status variables (response)
+Then, we change the variable names for convenience. 
+
+
+```{r}
+kmpdf<-bcdf[,c(1:3,6:8,13,20,4,15:16,19,18,17)]
+names(kmpdf)<-c("id","race","age","ER","PR","HER2","grade","stage","menopause",
+                "metastatic","survival","survival_month","relapse","relapse_month")
+```
+
+```{r}
+head(kmpdf)
+```
+
+```{r}
+median(kmpdf$age)
+mean(kmpdf$age)
+hist(kmpdf$age,main="histogram of age", xlab="age" )
+plot(density(kmpdf$age)) #kernel density plot 
+
+```
+
+The density plot shows that the age variable is approximately normal distributed. Since mean(55.58671) is slightly greater than median(54), the variable is slightly right skewed. Divide age into two groups by the median of age. If age is below the 54, we note it as "young"; otherwise "old".  
+```{r}
+kmpdf$age<-ifelse(kmpdf$age<median(kmpdf$age),"young","old")
+head(kmpdf)
+```
+
+Delete observations that race are specified as "other". We only focus on "Black" and "White" in race.  
+```{r}
+kmpdf<-kmpdf[kmpdf$race!="Other",]
+summary(kmpdf[,-1])
+```
+
+
+Convert most variables to factors except id, survival months and relapse month.  
+
+```{r}
+kmpdf[,-c(1,12,14)]<-lapply(kmpdf[,-c(1,12,14)],as.factor)
+summary(kmpdf)
+```
+
+
+
