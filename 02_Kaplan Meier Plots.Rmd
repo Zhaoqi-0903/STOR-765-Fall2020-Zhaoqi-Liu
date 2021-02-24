@@ -11,6 +11,8 @@ bcdf<-readRDS("breastcancerdf.rds")
 
 ```{r}
 library(dplyr)
+library(survival)
+library(survminer)
 ```
 
 ###Pre-select
@@ -33,8 +35,8 @@ head(kmpdf)
 ```{r}
 median(kmpdf$age)
 mean(kmpdf$age)
-hist(kmpdf$age,main="histogram of age", xlab="age" )
-plot(density(kmpdf$age)) #kernel density plot 
+hist(kmpdf$age,freq=FALSE,main="histogram of age", xlab="age" )
+lines(density(kmpdf$age),lwd=2, col=2) #kernel density plot 
 
 ```
 
@@ -51,12 +53,74 @@ summary(kmpdf[,-1])
 ```
 
 
-Convert most variables to factors except id, survival months and relapse month.  
+Convert most variables to factors except id and the response(survial, survival months, relapse, and relapse month).  Not convert survival and relapse because survival analyses require them to be numeric events.
 
 ```{r}
-kmpdf[,-c(1,12,14)]<-lapply(kmpdf[,-c(1,12,14)],as.factor)
+kmpdf[,-c(1,11:14)]<-lapply(kmpdf[,-c(1,11:14)],as.factor)
 summary(kmpdf)
+sapply(c(11,13),function(x){table(kmpdf[,x])})
+```
+
+survival: 0: alive 1:dead
+relapse: 0: no relapse 1: local and/or distant cancer recurrence or died of disease
+
+###Plot the density of survival month and relapse month 
+```{r}
+hist(kmpdf$survival_month,breaks =seq(0,250,25) ,freq=FALSE,xlim=c(0,250),
+     main="Histogram of Survival Months",xlab= "survival months")
+lines(density(kmpdf$survival_month),lwd=2,col=2)
+```
+
+```{r}
+hist(kmpdf$relapse_month,breaks =seq(0,175,25) ,freq=FALSE,xlim=c(0,175),
+     main="Histogram of Relapse Months",xlab= "relapse months")
+lines(density(kmpdf$relapse_month,na.rm = TRUE),lwd=2,col=2)
+```
+
+The distribution of survival months is quite normal, even though it's left skewed a little bit, which means that more observations than expected have short survival months. There are only 65 observations that has the relapse months data. The histogram shows that the data maybe follow a poission distribution with a small parameter $\lambda$. 
+
+
+```{r}
+attach(kmpdf)
+```
+
+### Kaplan Meier Curves
+
+####Overall
+Compare the survival distribution to examine whether or not there is an association between features and length of survival
+```{r}
+surv.all<-survfit(Surv(survival_month,survival)~1)
+summary(surv.all)
+plot(surv.all,main="Plot of Survival Curve for Breast Cancer Patients",xlab= "Length of Survival", ylab= "Proportion of Individuals who have Survived")
+```
+
+For the 341 people in the dataset, 97 people were uncensored(followed for the entire time, until occurence of event). Since the data has not yet dropped to 50% survival at the end of the available data, there is an NA value for median survival.
+The following summary goes through each time point in the study in which an individual was lost to follow up or died and re-computes the total number of people still at risk (n.risk), the number of events at that time point (n.event), the proportion of individuals who survived up until that point (survival) and the standard error (std.err) and 95% confidence interval (lower 95% CI, upper 95% CI) for the proportion of individuals who survived at that point.
+This plot shows the survival curve (also known as a Kaplan-Meier plot), the proportion of individual who have survived up until that particular time as a solid black line and the 95% confidence interval (the dashed lines).
+
+####Race 
+```{r}
+surv.race<-survfit(Surv(survival_month,survival)~race)
+plot(surv.race,col=c("blue","red"),ylim = c(0,1),
+     main="Plot of Survival Curve by Race Group", 
+     xlab = "Length of Survival",ylab= "Proportion of Individuals who have survived")
+legend("bottomright",legend=c("Black","White"),fill=c("blue","red"),bty="n")
+#Since the levels are "Black","White"
+```
+
+The 95% confidence interval of survival time for those on maintained chemotherapy is (, NA); NA in this case means infinity. A 95% upper confidence limit of NA/infinity is common in survival analysis due to the fact that the data is skewed.
+
+Using `survminer` package to plot. 
+```{r}
+ggsurvplot(surv.race,data=kmpdf,censor.size=4,conf.int=TRUE,pval=TRUE,
+           legend.labs= c("Black","White"))
 ```
 
 
+```{r}
+result.total<-survfit(Surv(time=kmpdf$survival_month,event=as.numeric(kmpdf$survival))~1)
+result.total
+summary(result.total)
+plot(result.total)
+```
 
