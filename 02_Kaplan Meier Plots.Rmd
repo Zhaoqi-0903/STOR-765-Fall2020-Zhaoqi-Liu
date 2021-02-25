@@ -103,7 +103,7 @@ For the 341 people in the dataset, 97 people were uncensored(followed for the en
 The following summary goes through each time point in the study in which an individual was lost to follow up or died and re-computes the total number of people still at risk (n.risk), the number of events at that time point (n.event), the proportion of individuals who survived up until that point (survival) and the standard error (std.err) and 95% confidence interval (lower 95% CI, upper 95% CI) for the proportion of individuals who survived at that point.
 This plot shows the survival curve (also known as a Kaplan-Meier plot), the proportion of individual who have survived up until that particular time as a solid black line and the 95% confidence interval (the dashed lines).
 
-####Race 
+#### Race 
 ```{r}
 surv.race<-survfit(Surv(survival_month,survival)~race)
 plot(surv.race,col=c("blue","red"),ylim = c(0,1),
@@ -123,7 +123,7 @@ ggsurvplot(surv.race,data=kmpdf,censor.size=4,conf.int=TRUE,pval=TRUE,
 ```
 
 
-####Age
+#### Age
 ```{r}
 surv.age<-survfit(Surv(survival_month,survival)~age)
 plot(surv.age,col=c("blue","red"),ylim = c(0,1),
@@ -140,7 +140,11 @@ survdiff(Surv(survival_month,survival)~age)
 ```
 
 
-####ER:  estrogen receptor status 
+
+
+
+#### ER
+estrogen receptor status 
 ```{r}
 surv.ER<-survfit(Surv(survival_month,survival)~ER)
 plot(surv.ER,col=c("blue","red"),ylim = c(0,1),
@@ -152,7 +156,11 @@ legend("bottomright",legend=c("negative","positive"),fill=c("blue","red"),bty="n
 survdiff(Surv(survival_month,survival)~ER) #not reject
 ```
 
-####PR progesterone receptor status
+
+
+
+#### PR
+progesterone receptor status
 ```{r}
 surv.PR<-survfit(Surv(survival_month,survival)~PR)
 plot(surv.PR,col=c("blue","red"),ylim = c(0,1),
@@ -164,7 +172,8 @@ legend("bottomright",legend=c("negative","positive"),fill=c("blue","red"),bty="n
 survdiff(Surv(survival_month,survival)~PR)
 ```
 
-####HER2 (human epidermal growth factor receptor 2) status
+#### HER2 
+(human epidermal growth factor receptor 2) status
 positive means: When a breast cell has abnormally high levels of the HER2 gene or the HER2 protein, it is called `HER2- positive`. Most patients with metastatic breast cancer have HER2-negative breast cancer.
 ```{r}
 surv.HER2<-survfit(Surv(survival_month,survival)~HER2)
@@ -177,7 +186,10 @@ legend("bottomright",legend=c("negative","positive"),fill=c("blue","red"),bty="n
 survdiff(Surv(survival_month,survival)~HER2)
 ```
 
-####grade: The overall grade of the tumor specimen at definitive surgery
+
+
+#### grade 
+The overall grade of the tumor specimen at definitive surgery
 0 means low grade, 1 means high grade. 
 Low-grade cancer cells (also known as well-differentiated cancer cells) look more like normal cells and tend to grow and spread more slowly than high-grade cancer cells(poorly differentiated or undifferentiated cancer cells.).
 ```{r}
@@ -190,7 +202,9 @@ legend("bottomright",legend=c("low-grade","high-grade"),fill=c("blue","red"),bty
 survdiff(Surv(survival_month,survival)~grade)
 ```
 
-####stage
+
+
+#### stage
 0 means low stage, 1 means high stage.
 Lower grade cancers are typically less aggressive and have a better prognosis. The more abnormal the cells look and organize themselves, the higher the cancer's grade. Cancer cells with a high grades tend to be more aggressive.
 ```{r}
@@ -203,7 +217,10 @@ legend("bottomright",legend=c("low-stage","high-stage"),fill=c("blue","red"),bty
 survdiff(Surv(survival_month,survival)~stage)
 ```
 
-####menopause: subject's menopausal status at diagnosis
+
+
+#### menopause
+subject's menopausal status at diagnosis
 0 means post-menopause, 1 means pre-menopause
 ```{r}
 surv.menopause<-survfit(Surv(survival_month,survival)~menopause)
@@ -215,9 +232,11 @@ legend("bottomright",legend=c("post-menopause","pre-menopause"),fill=c("blue","r
 survdiff(Surv(survival_month,survival)~menopause)
 ```
 
+
 This plot looks quite similar to the plot of survival curve by age, Since all old patients are most-menopause and most of young patients are pre-menopause. However, the p-value is not signifiant. 
 
-####metastatic: Has the subject been diagnosed with metastatic/distant disease?
+#### metastatic
+Has the subject been diagnosed with metastatic/distant disease?
 
 ```{r}
 surv.metastatic<-survfit(Surv(survival_month,survival)~metastatic)
