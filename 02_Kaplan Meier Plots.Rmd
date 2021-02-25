@@ -2,7 +2,7 @@
 title: "Kaplan-Meier plots"
 author: "Zhaoqi Liu"
 date: "2/20/2021"
-output: html_document
+output: pdf_document
 ---
 
 ```{r}
@@ -64,6 +64,11 @@ sapply(c(11,13),function(x){table(kmpdf[,x])})
 survival: 0: alive 1:dead
 relapse: 0: no relapse 1: local and/or distant cancer recurrence or died of disease
 
+```{r}
+saveRDS(kmpdf,"kmplotdf.rds")
+```
+
+
 ###Plot the density of survival month and relapse month 
 ```{r}
 hist(kmpdf$survival_month,breaks =seq(0,250,25) ,freq=FALSE,xlim=c(0,250),
@@ -106,6 +111,7 @@ plot(surv.race,col=c("blue","red"),ylim = c(0,1),
      xlab = "Length of Survival",ylab= "Proportion of Individuals who have survived")
 legend("bottomright",legend=c("Black","White"),fill=c("blue","red"),bty="n")
 #Since the levels are "Black","White"
+survdiff(Surv(survival_month,survival)~race)
 ```
 
 The 95% confidence interval of survival time for those on maintained chemotherapy is (, NA); NA in this case means infinity. A 95% upper confidence limit of NA/infinity is common in survival analysis due to the fact that the data is skewed.
@@ -117,10 +123,114 @@ ggsurvplot(surv.race,data=kmpdf,censor.size=4,conf.int=TRUE,pval=TRUE,
 ```
 
 
+####Age
 ```{r}
-result.total<-survfit(Surv(time=kmpdf$survival_month,event=as.numeric(kmpdf$survival))~1)
-result.total
-summary(result.total)
-plot(result.total)
+surv.age<-survfit(Surv(survival_month,survival)~age)
+plot(surv.age,col=c("blue","red"),ylim = c(0,1),
+     main="Plot of Survival Curve by Age Group", 
+     xlab = "Length of Survival",ylab= "Proportion of Individuals who have survived")
+legend("bottomright",legend=c("Old","Young"),fill=c("blue","red"),bty="n")
 ```
 
+log-rank test 
+H0: There is no difference in the survival function between those who were young and those who were old
+```{r}
+survdiff(Surv(survival_month,survival)~age)
+#reject H0
+```
+
+
+####ER:  estrogen receptor status 
+```{r}
+surv.ER<-survfit(Surv(survival_month,survival)~ER)
+plot(surv.ER,col=c("blue","red"),ylim = c(0,1),
+     main="Plot of Survival Curve by ER status", 
+     xlab = "Length of Survival",ylab= "Proportion of Individuals who have survived")
+legend("bottomright",legend=c("negative","positive"),fill=c("blue","red"),bty="n")
+#levels = 0,1 0 means negative, 1 means positive
+
+survdiff(Surv(survival_month,survival)~ER) #not reject
+```
+
+####PR progesterone receptor status
+```{r}
+surv.PR<-survfit(Surv(survival_month,survival)~PR)
+plot(surv.PR,col=c("blue","red"),ylim = c(0,1),
+     main="Plot of Survival Curve by PR status", 
+     xlab = "Length of Survival",ylab= "Survival Probability")
+legend("bottomright",legend=c("negative","positive"),fill=c("blue","red"),bty="n")
+#levels = 0,1 0 means negative, 1 means positive
+
+survdiff(Surv(survival_month,survival)~PR)
+```
+
+####HER2 (human epidermal growth factor receptor 2) status
+positive means: When a breast cell has abnormally high levels of the HER2 gene or the HER2 protein, it is called `HER2- positive`. Most patients with metastatic breast cancer have HER2-negative breast cancer.
+```{r}
+surv.HER2<-survfit(Surv(survival_month,survival)~HER2)
+plot(surv.HER2,col=c("blue","red"),ylim = c(0,1),
+     main="Plot of Survival Curve by HER2 status", 
+     xlab = "Length of Survival",ylab= "Survival Probability")
+legend("bottomright",legend=c("negative","positive"),fill=c("blue","red"),bty="n")
+#levels = 0,1. 0 means negative, 1 means positive
+
+survdiff(Surv(survival_month,survival)~HER2)
+```
+
+####grade: The overall grade of the tumor specimen at definitive surgery
+0 means low grade, 1 means high grade. 
+Low-grade cancer cells (also known as well-differentiated cancer cells) look more like normal cells and tend to grow and spread more slowly than high-grade cancer cells(poorly differentiated or undifferentiated cancer cells.).
+```{r}
+surv.grade<-survfit(Surv(survival_month,survival)~grade)
+plot(surv.grade,col=c("blue","red"),ylim = c(0,1),
+     main="Plot of Survival Curve by Grade Group", 
+     xlab = "Length of Survival",ylab= "Survival Probability")
+legend("bottomright",legend=c("low-grade","high-grade"),fill=c("blue","red"),bty="n")
+
+survdiff(Surv(survival_month,survival)~grade)
+```
+
+####stage
+0 means low stage, 1 means high stage.
+Lower grade cancers are typically less aggressive and have a better prognosis. The more abnormal the cells look and organize themselves, the higher the cancer's grade. Cancer cells with a high grades tend to be more aggressive.
+```{r}
+surv.stage<-survfit(Surv(survival_month,survival)~stage)
+plot(surv.stage,col=c("blue","red"),ylim = c(0,1),
+     main="Plot of Survival Curve by Stage Group", 
+     xlab = "Length of Survival",ylab= "Survival Probability")
+legend("bottomright",legend=c("low-stage","high-stage"),fill=c("blue","red"),bty="n")
+
+survdiff(Surv(survival_month,survival)~stage)
+```
+
+####menopause: subject's menopausal status at diagnosis
+0 means post-menopause, 1 means pre-menopause
+```{r}
+surv.menopause<-survfit(Surv(survival_month,survival)~menopause)
+plot(surv.menopause,col=c("blue","red"),ylim = c(0,1),
+     main="Plot of Survival Curve by Menopause Status", 
+     xlab = "Length of Survival",ylab= "Survival Probability")
+legend("bottomright",legend=c("post-menopause","pre-menopause"),fill=c("blue","red"),bty="n")
+
+survdiff(Surv(survival_month,survival)~menopause)
+```
+
+This plot looks quite similar to the plot of survival curve by age, Since all old patients are most-menopause and most of young patients are pre-menopause. However, the p-value is not signifiant. 
+
+####metastatic: Has the subject been diagnosed with metastatic/distant disease?
+
+```{r}
+surv.metastatic<-survfit(Surv(survival_month,survival)~metastatic)
+plot(surv.metastatic,col=c("blue","red"),ylim = c(0,1),
+     main="Plot of Survival Curve by Metastatic Status", 
+     xlab = "Length of Survival",ylab= "Survival Probability")
+legend("bottomright",legend=c("No","Yes"),fill=c("blue","red"),bty="n")
+
+survdiff(Surv(survival_month,survival)~metastatic)
+table(grade,metastatic)
+table(survival,metastatic)
+```
+
+The metastatic feature is dominant in survival. There are 51 patients who were diagonised with metastatic/distant disease and only 4 of them survived at the censored time. 
+
+Include age, PR, stage, in the report results section. 
