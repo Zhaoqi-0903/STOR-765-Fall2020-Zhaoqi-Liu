@@ -61,15 +61,29 @@ summary(kmpdf)
 sapply(c(11,13),function(x){table(kmpdf[,x])})
 ```
 
-survival: 0: alive 1:dead
-relapse: 0: no relapse 1: local and/or distant cancer recurrence or died of disease
-
 ```{r}
 saveRDS(kmpdf,"kmplotdf.rds")
 ```
 
+```{r}
+kmpdf<-readRDS("kmplotdf.rds")
+```
+
 
 ###Plot the density of survival month and relapse month 
+survival: 0: alive 1:dead
+Survival Month: Number of months survived since breast cancer diagnosis, value calculated automatically from DEMO_DIAGNOSISDATE to FOLLOW_LAST_CONTACT_DATE or FOLLOW_DEATHDATE
+
+relapse: 0: no relapse 1: local and/or distant cancer recurrence or died of disease
+Relapse event status (0=no relapse, 1=local and/or distant cancer recurrence or died of disease) NOT Relapse-Free Survival
+Relapse Month: Number of months to relapse  (number of months that is free from any relapse: local/distant cancer recurrence, or dead), calculated automatically from DEMO_DIAGNOSISDATE to FOLLOW_LOCALRECURRENCEDATE, and/or FOLLOW_DISTANT_DISEASE_DX_DATE. NOT Relapse-Free Survival
+
+```{r}
+table(survival,relapse)
+```
+
+230 patients survived and didn't suffer a relapse. 14 people had relapsed but was still alive at the time of follow-up. 46 patients died without a relapse, and 51 patients died and suffered a relapse.  
+
 ```{r}
 hist(kmpdf$survival_month,breaks =seq(0,250,25) ,freq=FALSE,xlim=c(0,250),
      main="Histogram of Survival Months",xlab= "survival months")
@@ -121,6 +135,19 @@ Using `survminer` package to plot.
 ggsurvplot(surv.race,data=kmpdf,censor.size=4,conf.int=TRUE,pval=TRUE,
            legend.labs= c("Black","White"))
 ```
+
+relapse:
+
+```{r}
+relapse.race<-survfit(Surv(relapse_month,relapse)~race)
+plot(relapse.race,col=c("blue","red"),ylim = c(0,1),
+     main="Plot of Relapse Curve by Race Group", 
+     xlab = "Length of Relapse",ylab= "Proportion of Individuals who have relapsed")
+legend("topright",legend=c("Black","White"),fill=c("blue","red"),bty="n")
+#Since the levels are "Black","White"
+survdiff(Surv(survival_month,survival)~race)
+```
+
 
 
 #### Age
