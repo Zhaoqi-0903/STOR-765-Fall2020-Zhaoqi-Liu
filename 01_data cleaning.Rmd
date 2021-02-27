@@ -61,8 +61,8 @@ race(DEMO_RACE),age(DEMO_AGE_AT_DIAGNOSIS), ER(PATH_ER), PR(PATH_PR), HER2(PATH_
 Then, we change the variable names for convenience. 
 ```{r}
 bcdf<-df[,c(1:3,6:8,13,20,4,15:16,19,18,17)]
-names(bcdf)<-c("id","race","age","ER","PR","HER2","grade","stage","menopause",
-                "metastatic","survival","survival_month","relapse","relapse_month")
+names(bcdf)<-c("Id","Race","Age","ER","PR","HER2","Grade","Stage","Menopause",
+                "Metastatic","Survival","Survival_month","Relapse","Relapse_month")
 bcdf<-cbind(bcdf,df[,c(24:26)])
 bcdf #dataframe after selecting the necessary variables, 346 observations and 17 variables
 
@@ -71,7 +71,7 @@ bcdf #dataframe after selecting the necessary variables, 346 observations and 17
 
 Delete observations that race are specified as "other". We only focus on "Black" and "White" in race.  
 ```{r}
-bcdf<-bcdf[bcdf$race!="Other",] # 341 observations, 17 variables
+bcdf<-bcdf[bcdf$Race!="Other",] # 341 observations, 17 variables
 summary(bcdf[,-1])
 ```
 
