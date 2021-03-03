@@ -82,6 +82,17 @@ bcdf[,-c(1,3,11:17)]<-lapply(bcdf[,-c(1,3,11:17)],as.factor)
 summary(bcdf)
 ```
 
+United the relapse group and died group of patients. 
+Because the relapse = 1 only means measured relapse. It's possible that the patient died of cancer recurrence without a diagnosis. Thus, we add two new columns: Mod_Relapse and Mod_Relapse_month. The Mod_Relapse variable denotes the status of measured relapse or death of disease. The status are coded as 1 if the patient either had a relapse or died. (Relapse=1 or Survival=1), 0 otherwise. There are 111 patients with Mod_Relapse denoted as 1. The Mod_Relapse_month refers to the time from breast cancer diagnosis to diagnosed recurrence or death, whichever comes first. If the patient with Mod_Relapse denoted as 0, their Mod_Relapse_month value is NA. 
+```{r}
+bcdf2<-bcdf
+union_criterion<-bcdf$Relapse==1 | bcdf$Survival ==1
+bcdf2$Mod_Relapse<-ifelse(bcdf$Relapse==1 | bcdf$Survival ==1,1,0)
+bcdf2$Mod_Relapse_month2<-ifelse(bcdf2$Relapse==0 & bcdf2$Survival==1, Survival_month, Relapse_month)
+```
+
+
+
 Save the resulting dataset 
 - dataset contains 341 observations and 17 variables.
 ```{r}
