@@ -1,0 +1,187 @@
+---
+title: "Kaplan-Meier Plot ver2"
+author: "Zhaoqi Liu"
+date: "2/26/2021"
+output: pdf_document
+---
+
+```{r}
+library(dplyr)
+library(survival)
+library(survminer)
+```
+
+
+Read in data from the final version of datafile. 
+=== 
+```{r}
+kmpdf<-readRDS("bcdf_final.rds")
+head(kmpdf)
+```
+
+Plot the age distribution and convert age to a categorical variable:
+===
+```{r}
+median(kmpdf$Age)
+mean(kmpdf$Age)
+hist(kmpdf$Age,freq=FALSE,main="Histogram of Age", xlab="Age" )
+lines(density(kmpdf$Age),lwd=2, col=2) #kernel density plot 
+```
+
+The density plot shows that the age variable is approximately normal distributed. Since mean(55.58671) is slightly greater than median(54), the variable is slightly right skewed. Divide age into two groups by the median of age. If age is below the 54, we note it as "young"; otherwise "old".  
+
+We also change the grade, stage, and menopause data of 0 and 1 to descriptive data for better plot. 
+
+```{r}
+kmpdf$Age<-ifelse(kmpdf$Age<median(kmpdf$Age),"young","old")
+kmpdf$Age<-factor(kmpdf$Age,levels =c("young","old"))
+head(kmpdf)
+```
+
+```{r}
+kmpdf$Grade<-ifelse(kmpdf$Grade==0,"low grade","high grade")
+kmpdf$Grade<-factor(kmpdf$Grade,levels=c("low grade","high grade"))
+kmpdf$Stage<-ifelse(kmpdf$Stage==0,"low stage","high stage")
+kmpdf$Stage<-factor(kmpdf$Stage,levels=c("low stage","high stage"))
+kmpdf$Menopause<-ifelse(kmpdf$Menopause==0,"post-menopause", "pre-menopause")
+kmpdf$Menopause<-factor(kmpdf$Menopause,levels=c("pre-menopause", "post-menopause"))
+head(kmpdf)
+```
+
+
+Plot the density of survival month and relapse month 
+=== 
+survival: 0: alive 1:dead
+Survival Month: Number of months survived since breast cancer diagnosis, value calculated automatically from DEMO_DIAGNOSISDATE to FOLLOW_LAST_CONTACT_DATE or FOLLOW_DEATHDATE
+
+relapse: 0: no relapse 1: local and/or distant cancer recurrence or died of disease
+Relapse event status (0=no relapse, 1=local and/or distant cancer recurrence or died of disease) NOT Relapse-Free Survival
+Relapse Month: Number of months to relapse  (number of months that is free from any relapse: local/distant cancer recurrence, or dead), calculated automatically from DEMO_DIAGNOSISDATE to FOLLOW_LOCALRECURRENCEDATE, and/or FOLLOW_DISTANT_DISEASE_DX_DATE. NOT Relapse-Free Survival
+
+```{r}
+kmpdf<-as.data.frame(kmpdf)
+attach(kmpdf)
+table(Survival,Relapse)
+detach(kmpdf)
+```
+
+230 patients survived and didn't suffer a relapse. 14 people had relapsed but was still alive at the time of follow-up. 46 patients died without a relapse, and 51 patients died and suffered a relapse.  
+![](/Users/Jocelyn/Downloads/STOR 765 consulting/STOR-765-Fall2020-Zhaoqi-Liu/follow up data description.png) 
+
+```{r}
+hist(kmpdf$Survival_month,breaks =seq(0,250,25) ,freq=FALSE,xlim=c(0,250),
+     main="Histogram of Survival Months",xlab= "Survival Months")
+lines(density(kmpdf$Survival_month),lwd=2,col=2)
+```
+
+```{r}
+hist(kmpdf$Relapse_month,breaks =seq(0,175,25) ,freq=FALSE,xlim=c(0,175),
+     main="Histogram of Relapse Months",xlab= "Months to Relapse")
+lines(density(kmpdf$Relapse_month,na.rm = TRUE),lwd=2,col=2)
+```
+
+The distribution of survival months is quite normal, even though it's left skewed a little bit, which means that more observations than expected have short survival months. There are only 65 observations that has the relapse months data. The histogram shows that the data maybe follow a poission distribution with a small parameter $\lambda$.
+
+Kaplan Meier Curves for both relapse and overall survival
+===
+
+## For overall survival curves
+
+#### Plots using basic R 
+```{r}
+surv<-Surv(kmpdf$Survival_month,kmpdf$Survival)
+surv.feature<-lapply(2:9,function(x){survfit(surv~as.matrix(kmpdf[,x]),data=kmpdf)})
+
+par(mfrow=c(2,2))
+lapply(1:8,function(x){
+  plot(surv.feature[[x]],col=c("blue","red"),ylim = c(0,1),
+     main=paste("Plot of Survival Curve by",names(kmpdf)[x+1]) , 
+     xlab = "Length of Survival (months)",ylab= "Survival Probability")
+legend("bottomright",legend=levels(kmpdf[,x+1]),fill=c("blue","red"),bty="n")})
+```
+
+```{r}
+survdiff(Surv(kmpdf$Survival_month,kmpdf$Survival)~kmpdf$Race)
+```
+
+
+### Plot using ggplot
+```{r}
+#first create a list of formula and then a list of survival objects
+surv.formula<-lapply(names(kmpdf)[2:9],function(x){as.formula(paste0("Surv(Survival_month,Survival) ~",x))})
+surv.fit<-surv_fit(surv.formula,data=kmpdf)
+p.surv<-ggsurvplot(surv.fit,data=kmpdf,pval=TRUE, 
+                   #risk.table=TRUE,
+                   ggtheme=theme_minimal(),
+              title=paste0("Survival Curve by ", as.list(names(kmpdf)[2:9])),
+              xlab = "Length of Survival (months)")
+arrange_ggsurvplots(p.surv[1:length(p.surv)],print=TRUE,ncol =2,nrow=2)
+p.surv
+```
+
+## stratified log-rank test 
+
+```{r}
+attach(kmpdf)
+survdiff(Surv(Survival_month,Survival)~ER+strata(Age)) 
+survdiff(Surv(Survival_month,Survival)~PR+strata(Age)) 
+ggsurvplot(surv_fit(Surv(Survival_month,Survival)~PR+strata(Age),data=kmpdf),data=kmpdf,pval=TRUE)
+#after stratifying the age, difference in PR groups is no longer significant 
+# -- age could be the confounding variable 
+survdiff(Surv(Survival_month,Survival)~Menopause+strata(Age)) 
+#after stratifying the age, differenec in menopause groups is no longer significant. 
+survdiff(Surv(Survival_month,Survival)~Grade+strata(Age))
+#p-value only slightly different from the unadjusted value, indicating that it's not necessary to stratify the age variable 
+survdiff(Surv(Survival_month,Survival)~Stage+strata(Age)) 
+#but difference in stage group becomes more significant 
+ggsurvplot(surv_fit(Surv(Survival_month,Survival)~Stage+strata(Age),data=kmpdf),data=kmpdf,pval=TRUE)
+detach(kmpdf)
+```
+
+For low-stage patients, the survival probabilities of old and young group are hugely different, especially at late survival times.  
+
+```{r}
+attach(kmpdf)
+survdiff(Surv(Survival_month,Survival)~Menopause+strata(Race)) 
+#after stratify the race, differenec in menopause groups is more significant. 
+# -- for patients in pre-menopuse status,  white group has higher survival probability
+ggsurvplot(surv_fit(Surv(Survival_month,Survival)~Menopause+strata(Race),data=kmpdf),data=kmpdf,
+           pval=TRUE,legend="bottom",legend.labs=c("pre&black", "pre&white", "post&black","post&white"))
+survdiff(Surv(Survival_month,Survival)~Grade+strata(Race))
+#p-value only slightly different from the unadjusted value, indicating that it's not necessary to stratify the age variable 
+survdiff(Surv(Survival_month,Survival)~Stage+strata(Race)) 
+#but difference in stage group becomes more significant 
+ggsurvplot(surv_fit(Surv(Survival_month,Survival)~Stage+strata(Race),data=kmpdf),data=kmpdf,pval =TRUE)
+detach(kmpdf)
+```
+
+```{r}
+attach(kmpdf)
+survdiff(Surv(Survival_month,Survival)~Menopause+strata(Race)) 
+#after stratify the race, differenec in menopause groups is more significant. 
+# -- for patients in pre-menopuse status,  white group has higher survival probability
+ggsurvplot(surv_fit(Surv(Survival_month,Survival)~Menopause+strata(Race),data=kmpdf),data=kmpdf,legend="bottom",legend.labs=c("pre&black", "pre&white", "post&black","post&white"))
+detach(kmpdf)
+```
+
+
+
+## For relapse
+```{r}
+surv.formula<-lapply(names(kmpdf)[2:9],function(x){as.formula(paste0("Surv(Relapse_month,Relapse) ~",x))})
+relapse.fit<-surv_fit(surv.formula,data=kmpdf)
+p.relapse<-ggsurvplot(relapse.fit,data=kmpdf,pval=TRUE,risk.table = TRUE,
+                      ggtheme=theme_minimal(),
+                      title=paste0("Relapse Curve by ",as.list(names(kmpdf)[2:9])),
+                      xlab = "Time to Relapse (months)")
+#arrange_ggsurvplots(p.relapse[1:length(p.relapse)],print=TRUE,ncol =2,nrow=2)
+p.relapse
+```
+
+How to deal with relapse data? 
+1. Change NA to be equal to the survival time if survival =0. If dead, change to relapse =1? Makes it be a RFS?
+2. Or use only the relapse data (no censoring, 65 patients) and do prentice modification of the Gehan-Wilcoxon test (put more weight on earlier survival). Since for example, the stage plot, low stage group (stage=0) shows a early survival advantage over the high-stage group
+
+
+
+
