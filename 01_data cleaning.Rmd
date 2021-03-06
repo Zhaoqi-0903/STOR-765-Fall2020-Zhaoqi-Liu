@@ -76,16 +76,19 @@ United the relapse group and died group of patients.
 Because the relapse = 1 only means measured relapse. It's possible that the patient died of cancer recurrence without a diagnosis. Thus, we add two new columns: Mod_Relapse and Mod_Relapse_month. The Mod_Relapse variable denotes the status of measured relapse or death of disease. The status are coded as 1 if the patient either had a relapse or died. (Relapse=1 or Survival=1), 0 otherwise. There are 111 patients with Mod_Relapse denoted as 1. The Mod_Relapse_month refers to the time from breast cancer diagnosis to diagnosed recurrence or death, whichever comes first. If the patient with Mod_Relapse denoted as 0, their Mod_Relapse_month value is NA. 
 ```{r}
 bcdf$Mod_Relapse<-ifelse(bcdf$Relapse==1 | bcdf$Survival ==1,1,0)
-bcdf$Mod_Relapse_month<-ifelse(bcdf$Relapse==0 & bcdf$Survival==1, Survival_month, Relapse_month)
+bcdf$Mod_Relapse_month<-ifelse(bcdf$Relapse==0 & bcdf$Survival==1, bcdf$Survival_month, bcdf$Relapse_month)
 bcdf<-bcdf[,c(1:14,18,19,15:17)]#change the order of column 
 head(bcdf) #17 variables 
 ```
 
 
 Delete observations that race are specified as "other". We only focus on "Black" and "White" in race.  
+Removing 18 observations whose Grade value is missing
 ```{r}
 bcdf<-bcdf[bcdf$Race!="Other",] # 341 observations, 17 variables
+bcdf<-bcdf[!is.na(bcdf$Grade),]
 summary(bcdf[,-1])
+
 ```
 
 Convert most clinical info variables to factors (race, ER, PR, HER2, grade, stage, menopause, metastatic). Not convert survival and relapse because survival analyses require them to be numeric events.
