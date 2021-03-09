@@ -1,0 +1,283 @@
+---
+title: "Cox models"
+author: "Zhaoqi Liu"
+date: "2/26/2021"
+output: pdf_document
+---
+
+```{r}
+bcdf<-readRDS("bcdf_final.rds")
+bcdf$Race<-ifelse(bcdf$Race=="Black",0,1) #convert to numeric variable
+bcdf<-as.data.frame(bcdf)
+```
+
+```{r}
+library(ggplot2)
+library(survival)
+library(glmnet)
+library(forestplot)
+```
+
+
+### For Overall Survival:
+
+#### Using 2 predictors: average neculus count and average cytomembrane count of LSR
+```{r}
+attach(bcdf)
+cor(AveNCount,AveCMCount)
+plot(AveNCount,AveCMCount)
+detach(bcdf)
+ggplot(data=bcdf,aes(x=Survival_month,y=AveTCount))+geom_point(aes(color=as.factor(Survival)))
+ggplot(data=bcdf,aes(x=Survival_month,y=AveNCount))+geom_point(aes(color=as.factor(Survival)))
+```
+
+
+Simple Cox Model and check the proportional-hazards assusmption 
+```{r}
+#model.add<-coxph(Surv(Survival_month,Survival)~AveNCount+AveCMCount,data=bcdf)#colinearity
+model.n<-coxph(Surv(Survival_month,Survival)~AveNCount,data=bcdf)
+model.n
+test.ph.n<-cox.zph(model.n)
+ggcoxzph(test.ph.n)
+model.cm<-coxph(Surv(Survival_month,Survival)~AveCMCount,data=bcdf)
+model.cm
+test.ph.cm<-cox.zph(model.cm)
+ggcoxzph(test.ph.cm) #assumption roughly hold 
+```
+
+In model.add, no features are statistically significant based on the wald test.
+
+```{r}
+#logLik(model.add)
+logLik(model.n)
+logLik(model.cm)
+#partial likelihood ratio test 
+2*(-512.6753--513.2001)#2*l(full)-l(reduced) with df =2-1= 1
+pchisq(1.0496,1,lower.tail = FALSE) #effect of AveNCount is not statistically significant when AveCMCount is included in the model
+2*(-512.6753--512.9614)
+pchisq(0.5722,1,lower.tail = FALSE) #effect of AveCMCount is not statistically significant when AveNCount is included in the model 
+
+#null model
+logLik(coxph(Surv(Survival_month,Survival)~1,data=bcdf))
+pchisq(2*(-513.2001--515.4559),1,lower.tail = FALSE) #AveNCount byitself is significant , so is AveCMCount
+AIC(coxph(Surv(Survival_month,Survival)~1,data=bcdf)) #null model AIC
+```
+
+```{r}
+AIC(model.add)
+AIC(model.cm) #best among the three 
+AIC(model.n)
+```
+
+
+### check if there are unusual pattern 
+
+```{r}
+lapply(2:9,FUN=function(x){
+  ggplot(data=bcdf,aes(x=Survival_month,y=AveTCount,color=unlist(bcdf[,x])))+
+    geom_point()+
+    labs(color=names(bcdf)[x])
+})
+```
+
+#### Using 1 predictors: average total count of LSR 
+
+```{r}
+summary(coxph(Surv(Survival_month,Survival)~AveTCount,data=bcdf,ties="efron"))
+
+
+model.t<-coxph(Surv(Survival_month,Survival)~AveTCount,data=bcdf,ties="efron")
+model.t
+test.ph.t<-cox.zph(model.t,transform="km")
+ggcoxzph(test.ph.t)
+# "discrete exact method"
+```
+
+Martingale residuals 
+```{r}
+result.coxph.0<-coxph(Surv(Survival_month, Survival)~1, data=bcdf)
+rr.0<-residuals(result.coxph.0,type="martingale")
+
+#assess the potential relationship of survival to AveTCount
+smoothSEcurve <- function(yy, xx) {
+# use after a call to "plot"
+# fit a lowess curve and 95% confidence interval curve
+# make list of x values
+  xx.list <- min(xx) + ((0:100)/100)*(max(xx) - min(xx))
+# Then fit loess function through the points (xx, yy)
+# at the listed values
+  yy.xx <- predict(loess(yy ~ xx), se=T,
+  newdata=data.frame(xx=xx.list))
+  lines(yy.xx$fit ~ xx.list, lwd=2)
+  lines(yy.xx$fit -
+  qt(0.975, yy.xx$df)*yy.xx$se.fit ~ xx.list, lty=2)
+  lines(yy.xx$fit +
+  qt(0.975, yy.xx$df)*yy.xx$se.fit ~ xx.list, lty=2)
+}
+plot(rr.0~bcdf$AveTCount)
+smoothSEcurve(rr.0,bcdf$AveTCount) #fit a LOESS(locally weighted scatterplot smoothing) curve
+
+
+
+
+```
+
+
+
+
+apply the univariate coxph function to multiple covariate at once. 
+```{r}
+covariates <- c("AveNCount","AveCMCount","AveTCount")
+univ_formulas <- sapply(covariates,
+                        function(x) as.formula(paste('Surv(Survival_month, Survival)~', x)))
+                        
+univ_models <- lapply(univ_formulas, function(x){coxph(x, data = bcdf)})
+# Extract data 
+univ_results <- lapply(univ_models,
+                       function(x){ 
+                          x <- summary(x)
+                          p.value<-signif(x$wald["pvalue"], digits=2)
+                          wald.test<-signif(x$wald["test"], digits=2)
+                          beta<-signif(x$coef[1], digits=2);#coeficient beta
+                          HR <-signif(x$coef[2], digits=2);#exp(beta)
+                          HR.confint.lower <- signif(x$conf.int[,"lower .95"], 2)
+                          HR.confint.upper <- signif(x$conf.int[,"upper .95"],2)
+                          #HR <- paste0(HR, " (", 
+                          #             HR.confint.lower, "-", HR.confint.upper, ")")
+                          res<-c(beta, HR, HR.confint.lower, 
+                                 HR.confint.upper,wald.test, p.value)
+                          names(res)<-c("beta", "HR",
+                                        "HR.confint.lower","HR.confint.upper", 
+                                        "wald.test", "p.value")
+                          return(res)
+                          #return(exp(cbind(coef(x),confint(x))))
+                         })
+res <- t(as.data.frame(univ_results, check.names = FALSE))
+res
+#as.data.frame(res)
+```
+
+Client request investigation: 
+```{r}
+summary(coxph(Surv(Survival_month,Survival)~AveTCount+ER+Race,data=bcdf,ties="efron"))
+AIC(coxph(Surv(Survival_month,Survival)~AveTCount+ER+Race,data=bcdf,ties="efron"))
+
+summary(coxph(Surv(Survival_month,Survival)~AveNCount+AveCMCount+ER+Race,data=bcdf,ties="efron"))
+AIC(coxph(Surv(Survival_month,Survival)~AveTCount+AveCMCount+ER+Race,data=bcdf,ties="efron"))
+
+ggsurvplot(surv_fit(Surv(Survival_month,Survival)~ER,data=kmpdf,group.by="Race"),data=kmpdf,pval=TRUE)
+```
+
+### Stepwise variable selection
+```{r}
+model.All.coxph<-coxph(Surv(Survival_month, Survival)~Race+Age+ER+PR+HER2+Grade+Stage+AveTCount+AveNCount+AveCMCount,data=bcdf)
+result.step<-step(model.All.coxph, 
+                  scope = list(upper = ~Race+Age+ER+PR+HER2+Grade+Stage+AveTCount+AveCMCount+AveNCount, 
+                               lower = ~AveTCount)) #forcing AveTCount in the model 
+result.step 
+coxph(Surv(Survival_month, Survival)~Age+Grade+Stage+AveTCount,data=bcdf)
+```
+
+```{r}
+# not force AveTCount in the data 
+result.step<-step(model.All.coxph)
+result.step 
+```
+
+
+forest plot for the Cox model with multiple variables 
+```{r}
+#result.step 
+coef.est <- c(0.044207, NA, NA, NA,0, 0.433748, NA, NA, NA, 0, 0.605995, NA, NA,NA,0,1.200739, NA,0.841978)
+se.est <- c(0.007857, NA, NA,NA, 0, 0.283465, NA, NA, NA, 0, 0.230007,NA, NA, NA,0,0.225934,NA, 0.570057)
+lower <- coef.est - 1.96*se.est
+upper <- coef.est + 1.96*se.est
+label.factors <- matrix(c(" Age","", "HER2","", " negative", " positive", "", "Grade", "",   "  low", " high", "", "Stage", "", "  low", " high", "", "AveNCount"), ncol=1)
+```
+
+```{r}
+forestplot(label.factors, coef.est, lower=lower, upper=upper,
+boxsize=0.4, xticks=c(-0.5,0,0.5, 1, 1.5, 2),
+txt_gp=fpTxtGp(label=gpar(cex=1)), xlab="log hazard ratio",
+col = fpColors(box = "royalblue",
+                          line = "darkblue",
+                          summary = "royalblue"))
+```
+
+
+```{r}
+cox.zph(result.step)
+ggcoxzph(cox.zph(result.step))
+
+#martingale residual 
+rr.final<-residuals(result.step, type="martingale")
+plot(rr.final~bcdf$AveTCount)
+smoothSEcurve(rr.final,bcdf$AveTCount)
+```
+
+
+
+```{r}
+set.seed(2021)
+cv.lasso.fit<-cv.glmnet(x,y,family="cox",type.measure="C") # Harrell C index:  a higher C index means better prediction performance
+plot(cv.lasso.fit)
+cv.lasso.fit$lambda.min
+```
+
+```{r}
+coef(lasso.fit,s=cv.lasso.fit$lambda.min)
+coef(lasso.fit,s=0.05) #lambda = 0.05 only four features are selected 
+```
+
+
+```{r}
+cox.lassovar<-coxph(Surv(Mod_Relapse_month,Mod_Relapse)~AveTCount+Race+Age+ER+HER2+Grade+Stage,data=bcdf)
+```
+
+
+### Forest Plot 
+
+###For Relapse: 
+Simple cox 
+```{r}
+coxph(Surv(Mod_Relapse_month,Mod_Relapse)~AveNCount,data=bcdf)
+coxph(Surv(Mod_Relapse_month,Mod_Relapse)~AveCMCount,data=bcdf)
+coxph(Surv(Mod_Relapse_month,Mod_Relapse)~AveTCount,data=bcdf)
+
+cox.zph(coxph(Surv(Mod_Relapse_month,Mod_Relapse)~AveNCount,data=bcdf))
+cox.zph(coxph(Surv(Mod_Relapse_month,Mod_Relapse)~AveCMCount,data=bcdf))
+cox.zph(coxph(Surv(Mod_Relapse_month,Mod_Relapse)~AveTCount,data=bcdf))
+ggcoxzph(cox.zph(coxph(Surv(Mod_Relapse_month,Mod_Relapse)~AveTCount,data=bcdf)))
+```
+
+```{r}
+covariates <- c("AveNCount","AveCMCount","AveTCount")
+univ_formulas <- sapply(covariates,
+                        function(x) as.formula(paste('Surv(Mod_Relapse_month, Mod_Relapse)~', x)))
+                        
+univ_models <- lapply(univ_formulas, function(x){coxph(x, data = bcdf)})
+# Extract data 
+univ_results <- lapply(univ_models,
+                       function(x){ 
+                          x <- summary(x)
+                          p.value<-signif(x$wald["pvalue"], digits=2)
+                          wald.test<-signif(x$wald["test"], digits=2)
+                          beta<-signif(x$coef[1], digits=2);#coeficient beta
+                          HR <-signif(x$coef[2], digits=2);#exp(beta)
+                          HR.confint.lower <- signif(x$conf.int[,"lower .95"], 2)
+                          HR.confint.upper <- signif(x$conf.int[,"upper .95"],2)
+                          #HR <- paste0(HR, " (", 
+                          #             HR.confint.lower, "-", HR.confint.upper, ")")
+                          res<-c(beta, HR, HR.confint.lower, 
+                                 HR.confint.upper,wald.test, p.value)
+                          names(res)<-c("beta", "HR",
+                                        "HR.confint.lower","HR.confint.upper", 
+                                        "wald.test", "p.value")
+                          return(res)
+                          #return(exp(cbind(coef(x),confint(x))))
+                         })
+res <- t(as.data.frame(univ_results, check.names = FALSE))
+res
+```
+
+

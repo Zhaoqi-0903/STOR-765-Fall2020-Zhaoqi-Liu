@@ -1,0 +1,179 @@
+---
+title: "04_LASSO Cox Model"
+author: "Zhaoqi Liu"
+date: "3/9/2021"
+output: pdf_document
+---
+
+```{r}
+library(penalized)
+library(survival)
+library(glmnet)
+```
+
+```{r}
+bcdf<-readRDS("bcdf_final.rds")
+bcdf$Race<-ifelse(bcdf$Race=="Black",0,1) #convert to numeric variable
+bcdf[,3:9]<-apply(bcdf[,3:9],MARGIN=2,FUN=as.numeric) #convert factor to numeric 
+bcdf<-as.data.frame(bcdf)
+```
+
+```{r}
+attach(bcdf) #don't forget to detach after using 
+```
+
+# For overall survival
+
+### only put one LSR data (AveTCount) into the model 
+```{r}
+
+lsrone.pen1<-penalized(Surv(Survival_month, Survival), penalized = bcdf[,c(2:9,19)],standardize = TRUE, lambda1= 1) #nine non-zero coefficient 
+round(coef(lsrone.pen1, standardize=T), 3)
+
+lsrone.pen2<-penalized(Surv(Survival_month, Survival), penalized = bcdf[,c(2:9,19)],standardize = TRUE, lambda1= 14) #four non-zero coefficient 
+round(coef(lsrone.pen2, standardize=T), 3)
+```
+
+
+```{r}
+# choose the lambda by 10-fold crossvalidation 
+set.seed(765)
+lsrone.pen<-profL1(Surv(Survival_month, Survival), penalized = bcdf[,c(2:9,19)],
+                 standardize = TRUE, fold=10, minlambda1= 10, maxlambda1=15) 
+```
+
+Find optimal value of lambda and plot 
+```{r}
+set.seed(765)
+lsrone.opt<-optL1(Surv(Survival_month, Survival), penalized = bcdf[,c(2:9,19)],standardize =TRUE, fold=10)
+lsrone.opt$lambda
+# cvl - cross-validation partial log-likelihood
+plot(lsrone.pen$cvl~lsrone.pen$lambda, type="l", log="x", xlab = "lambda",
+     ylab="Cross-validated log partial likelihood")
+abline(v=lsrone.opt$lambda, col="red",lty=2)
+```
+
+
+We then use the “plotpath” function to plot the coefficient profiles:
+```{r}
+lsrone<- penalized(Surv(Survival_month, Survival), penalized = bcdf[,c(2:9,19)],
+standardize=T,
+steps=20, lambda1=5)
+plotpath(lsrone, labelsize=0.7, standardize=T, log="x",lwd=2, main="Coefficients vs lambda")
+abline(v=lsrone.opt$lambda, col="gray", lwd=2)
+```
+
+
+```{r}
+lsrone.coef<-penalized(Surv(Survival_month, Survival), penalized = bcdf[,c(2:9,19)],standardize = TRUE, lambda1= lsrone.opt$lambda) #four non-zero coefficient 
+round(coef(lsrone.coef, standardize=T), 3)
+exp(coef(lsrone.coef, standardize=T))
+```
+
+
+
+### put all LSR data (AveNCount, AveCMCount, AveTCount) in the model 
+
+```{r}
+set.seed(765)
+lsrall.pen<-profL1(Surv(Survival_month, Survival), 
+                   penalized = bcdf[,c(2:9,17:19)],
+                 standardize = TRUE, fold=10, minlambda1= 10, maxlambda1=15) 
+```
+
+```{r}
+set.seed(765)
+lsrall.opt<-optL1(Surv(Survival_month, Survival), penalized = bcdf[,c(2:9,17:19)],standardize =TRUE, fold=10)
+lsrall.opt$lambda
+# cvl - cross-validation partial log-likelihood
+plot(lsrall.pen$cvl~lsrall.pen$lambda, type="l", log="x", xlab = "lambda",
+     ylab="Cross-validated log partial likelihood")
+abline(v=lsrall.opt$lambda, col="red",lty=2)
+```
+
+
+```{r}
+set.seed(765)
+lsrall.coef<-penalized(Surv(Survival_month, Survival), penalized = bcdf[,c(2:9,17:19)],standardize = TRUE, lambda1= lsrall.opt$lambda) #four non-zero coefficient 
+round(coef(lsrall.coef, standardize=T), 3)
+exp(coef(lsrall.coef, standardize=T))
+```
+
+```{r}
+lsrall<- penalized(Surv(Survival_month, Survival), 
+                   penalized = bcdf[,c(2:9,17:19)],standardize=T,
+steps=20, lambda1=5)
+plotpath(lsrall, labelsize=0.7, standardize=T, log="x",lwd=2, main="Coefficients vs lambda")
+abline(v=lsrall.opt$lambda, col="gray", lwd=2)
+```
+
+
+
+```{r}
+detach(bcdf)
+```
+
+
+#### LASSO COX MODEL Using `glmnet` (put all LSR data in)
+```{r}
+x<-as.matrix(bcdf[,c(2:9,17:19)])
+y<-cbind(time=bcdf[,12],status=bcdf[,11])
+glm.fit<-glmnet(x,y,family="cox")
+plot(glm.fit)
+```
+
+L1 Norm is the sum of absolute value of coefficients 
+Each curve corresponds to a variable. It shows the path of its coefficient against the ℓ1-norm of the whole coefficient vector as 𝜆 varies. The axis above indicates the number of nonzero coefficients at the current 𝜆, which is the effective degrees of freedom (df) for the lasso. 
+
+```{r}
+set.seed(765)
+cv.fit.deviance<-cv.glmnet(x,y,family="cox",nfold=10,type.measure = "deviance") #best lambda is around 0.04
+plot(cv.fit.deviance)
+
+cv.fit.c<-cv.glmnet(x,y,family="cox",nfold=10,type.measure = "C") #best lambda is around 0.04
+plot(cv.fit.c)
+cv.fit.c$lambda.min
+coef(cv.fit.c,s=cv.fit.c$lambda.min)
+```
+
+The optimal lambda only selects two variables. Age and Stage. 
+
+
+### LASSO Cox Hazard Model 
+```{r} 
+library(glmnet)
+x<-na.omit(bcdf[,c(2:9)])
+x<-apply(x,MARGIN=2,as.numeric) # create matrices
+x<-cbind(x,AveTCount=bcdf[!is.na(bcdf$Grade),][,19])
+y<-cbind(time=bcdf[,12],status = bcdf[,11])
+```
+
+```{r}
+lasso.fit<-glmnet(x,y,family="cox")
+plot(lasso.fit,label=TRUE)
+colnames(x)
+```
+
+
+### For Relapse 
+
+#fast check-- whether useful variables are selected 
+```{r}
+#lasso cox model time>0, time=0 not allowed
+x<-as.matrix(bcdf[!is.na(bcdf[,16]) & bcdf[,16]>0,][,c(2:9,17:19)])
+y<-cbind(time=bcdf[!is.na(bcdf[,16]) & bcdf[,16]>0,][,16],
+         status=bcdf[!is.na(bcdf[,16]) & bcdf[,16]>0,][,15])
+glm.fit<-glmnet(x,y,family="cox")
+plot(glm.fit)
+```
+
+```{r}
+set.seed(765)
+cv.fit.c<-cv.glmnet(x,y,family="cox",nfold=10,type.measure = "C") #best lambda is around 0.04
+plot(cv.fit.c)
+cv.fit.c$lambda.min
+coef(cv.fit.c,s=cv.fit.c$lambda.min)
+```
+
+
+coefficient flip. effect change.

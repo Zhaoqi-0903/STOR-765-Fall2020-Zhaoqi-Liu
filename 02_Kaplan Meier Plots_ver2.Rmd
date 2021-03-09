@@ -9,6 +9,7 @@ output: pdf_document
 library(dplyr)
 library(survival)
 library(survminer)
+library(patchwork)
 ```
 
 
@@ -16,9 +17,11 @@ Read in data from the final version of datafile.
 === 
 ```{r}
 kmpdf<-readRDS("bcdf_final.rds")
+kmpdf<-data.frame(kmpdf)
 head(kmpdf)
 ```
 
+### EDA
 Plot the age distribution and convert age to a categorical variable:
 ===
 ```{r}
@@ -26,6 +29,29 @@ median(kmpdf$Age)
 mean(kmpdf$Age)
 hist(kmpdf$Age,freq=FALSE,main="Histogram of Age", xlab="Age" )
 lines(density(kmpdf$Age),lwd=2, col=2) #kernel density plot 
+p1<-ggplot(kmpdf, aes(x =Survival_month, y = Age)) +
+  geom_point(aes(color=as.factor(Survival)))+
+  scale_color_discrete(name="Survival",labels=c("Yes","No")) +
+  labs(title = "Age vs Survival Time by Survival Status", x="Time in months")+theme_bw()
+p4<-ggplot(kmpdf, aes(x =Survival_month, y = Age)) +
+  geom_point(aes(color = as.factor(Relapse))) +
+  scale_color_discrete(name="Relapse",labels=c("No","Yes"))+
+  labs(title="Age vs Survival Time by Relapse Status" ,x = "Time in months")+theme_bw()
+p1/p4
+
+
+p2<-ggplot(kmpdf, aes(x =Relapse_month, y = Age)) +
+  geom_point(aes(color = as.factor(Survival))) +
+  coord_cartesian(xlim = c(0, 225))+
+  scale_color_discrete(name="Survival",labels=c("Yes","No"))+
+  labs(title="Age vs Time to Relapse" ,x = "Time in months")+theme_bw()
+p3<-ggplot(kmpdf, aes(x =Mod_Relapse_month, y = Age)) +
+  geom_point(aes(color=as.factor(Survival)))+
+  coord_cartesian(xlim = c(0, 225))+
+  scale_color_discrete(name="Survival",labels=c("Yes","No"))+
+  labs(title = "Age vs Time to Relapse or Death(whichever comes first)",x="Time in months" )+theme_bw()
+p2/p3
+
 ```
 
 The density plot shows that the age variable is approximately normal distributed. Since mean(55.58671) is slightly greater than median(54), the variable is slightly right skewed. Divide age into two groups by the median of age. If age is below the 54, we note it as "young"; otherwise "old".  
@@ -43,10 +69,102 @@ kmpdf$Grade<-ifelse(kmpdf$Grade==0,"low grade","high grade")
 kmpdf$Grade<-factor(kmpdf$Grade,levels=c("low grade","high grade"))
 kmpdf$Stage<-ifelse(kmpdf$Stage==0,"low stage","high stage")
 kmpdf$Stage<-factor(kmpdf$Stage,levels=c("low stage","high stage"))
-kmpdf$Menopause<-ifelse(kmpdf$Menopause==0,"post-menopause", "pre-menopause")
-kmpdf$Menopause<-factor(kmpdf$Menopause,levels=c("pre-menopause", "post-menopause"))
+kmpdf$Menopause<-ifelse(kmpdf$Menopause==0,"post", "pre")
+kmpdf$Menopause<-factor(kmpdf$Menopause,levels=c("pre", "post"))
 head(kmpdf)
+
 ```
+
+
+Plot the Survival Time vs LSR 
+```{r}
+p1<-ggplot(kmpdf, aes(x =Survival_month, y = AveNCount)) +
+  geom_point(aes(color=as.factor(Survival)))+
+  scale_y_continuous(limits = c(0,1))+
+  scale_color_discrete(name="Survival",labels=c("Yes","No")) +
+  labs(title = "AveNCount vs Survival Time by Survival Status", x="Time in months")+theme_bw()
+p2<-ggplot(kmpdf, aes(x =Mod_Relapse_month, y = AveNCount)) +
+  geom_point(aes(color = as.factor(Survival)))+
+  scale_y_continuous(limits = c(0,1))+
+  scale_color_discrete(name="Survival",labels=c("No","Yes"))+
+  labs(title="AveNCount vs Relapse Time by Survival Status" ,x = "Time in months")+theme_bw()
+p1/p2
+
+p3<-ggplot(kmpdf, aes(x =Survival_month, y = AveCMCount)) +
+  geom_point(aes(color=as.factor(Survival)))+
+  scale_y_continuous(limits = c(0,2))+
+  scale_color_discrete(name="Survival",labels=c("Yes","No")) +
+  labs(title = "AveCMCount vs Survival Time by Survival Status", x="Time in months")+theme_bw()
+p4<-ggplot(kmpdf, aes(x =Mod_Relapse_month, y = AveCMCount)) +
+  geom_point(aes(color = as.factor(Survival))) +
+  scale_y_continuous(limits = c(0,2))+
+  scale_color_discrete(name="Survival",labels=c("No","Yes"))+
+  labs(title="AveCMCount vs Relapse Time by Survival Status" ,x = "Time in months")+theme_bw()
+p3/p4
+
+p5<-ggplot(kmpdf, aes(x =Survival_month, y = AveTCount)) +
+  geom_point(aes(color=as.factor(Survival)),cex=0.9)+
+  scale_y_continuous(limits = c(0,3))+
+  scale_color_discrete(name="Survival",labels=c("Yes","No")) +
+  labs(title = "AveTCount vs Survival Time by Survival Status", x="Time in months")+theme_bw()
+p6<-ggplot(kmpdf, aes(x =Relapse_month, y = AveTCount)) +
+  geom_point(aes(color = as.factor(Survival)),cex=0.9) +
+  scale_y_continuous(limits = c(0,3))+
+  scale_x_continuous(limits = c(0,225))+
+  scale_color_discrete(name="Survival",labels=c("Yes","No"))+
+  labs(title="AveTCount vs Relapse Time by Survival Status" ,x = "Time in months")+theme_bw()
+p7<-ggplot(kmpdf, aes(x =Mod_Relapse_month, y = AveTCount)) +
+  geom_point(aes(color = as.factor(Survival)),cex=0.9) +
+  scale_y_continuous(limits = c(0,3))+
+  scale_x_continuous(limits = c(0,225))+
+  scale_color_discrete(name="Survival",labels=c("Yes","No"))+
+  labs(title="AveTCount vs Modified Relapse Time by Survival Status" ,x = "Time in months")+theme_bw()
+p5/p6/p7
+
+p8<-ggplot(kmpdf, aes(x = AveTCount, y = Survival_month)) +
+  geom_point(aes(color=as.factor(Survival)),cex=0.9)+
+  scale_x_continuous(limits = c(0,3))+
+  scale_color_discrete(name="Survival",labels=c("Yes","No")) +
+  labs(title = "AveTCount vs Survival Time by Survival Status", y="Time in months")+theme_bw()
+p9<-ggplot(kmpdf, aes(x =AveTCount,y = Relapse_month)) +
+  geom_point(aes(color = as.factor(Survival)),cex=0.9) +
+  scale_x_continuous(limits = c(0,3))+
+  scale_y_continuous(limits = c(0,225))+
+  scale_color_discrete(name="Survival",labels=c("Yes","No"))+
+  labs(title="AveTCount vs Relapse Time by Survival Status" ,y = "Time in months")+theme_bw()
+p10<-ggplot(kmpdf, aes(x= AveTCount, y =Mod_Relapse_month)) +
+  geom_point(aes(color = as.factor(Survival)),cex=0.9) +
+  scale_x_continuous(limits = c(0,3))+
+  scale_y_continuous(limits = c(0,225))+
+  scale_color_discrete(name="Survival",labels=c("Yes","No"))+
+  labs(title="AveTCount vs Modified Relapse Time by Survival Status" ,y = "Time in months")+theme_bw()
+(p8|p9|p10)
+```
+
+median survival time 
+```{r}
+#survival
+max(kmpdf[kmpdf$Survival==1,]$Survival_month)
+max(kmpdf[kmpdf$Survival==0,]$Survival_month)
+max(kmpdf$Survival_month)
+
+#relapse and modified relapse
+max(kmpdf$Relapse_month,na.rm = TRUE)
+max(kmpdf$Mod_Relapse_month, na.rm=TRUE)
+
+#median survival time for died group 
+survfit(Surv(kmpdf[kmpdf$Survival==1,]$Survival_month,kmpdf[kmpdf$Survival==1,]$Survival)~1) # 63 months
+plot(survfit(Surv(kmpdf[kmpdf$Survival==1,]$Survival_month,kmpdf[kmpdf$Survival==1,]$Survival)~1))
+
+#median relapse time
+survfit(Surv(kmpdf$Relapse_month,kmpdf$Relapse)~1)
+plot(survfit(Surv(kmpdf$Relapse_month,kmpdf$Relapse)~1))
+
+#median modified relapse time
+survfit(Surv(kmpdf$Mod_Relapse_month,kmpdf$Mod_Relapse)~1)
+plot(survfit(Surv(kmpdf$Mod_Relapse_month,kmpdf$Mod_Relapse)~1))
+```
+
 
 
 Plot the density of survival month and relapse month 
@@ -72,12 +190,22 @@ detach(kmpdf)
 hist(kmpdf$Survival_month,breaks =seq(0,250,25) ,freq=FALSE,xlim=c(0,250),
      main="Histogram of Survival Months",xlab= "Survival Months")
 lines(density(kmpdf$Survival_month),lwd=2,col=2)
+ggplot(data=kmpdf,aes(x=Survival_month,fill=as.factor(Survival)))+
+  geom_histogram(aes(y=..density..),position="dodge",bins=10)+
+  geom_density(alpha=0.2)+
+  labs(title = "Distribution of Survival Times")+
+  scale_fill_discrete(name="Survival ",labels=c("Yes","No"))
 ```
 
 ```{r}
 hist(kmpdf$Relapse_month,breaks =seq(0,175,25) ,freq=FALSE,xlim=c(0,175),
      main="Histogram of Relapse Months",xlab= "Months to Relapse")
 lines(density(kmpdf$Relapse_month,na.rm = TRUE),lwd=2,col=2)
+ggplot(data=kmpdf,aes(x=Survival_month,fill=as.factor(Relapse)))+
+  geom_histogram(position="dodge",bins=10)
+  #geom_density(alpha=0.2,aes(color=as.factor(Survival)))
+ggplot(data=kmpdf,aes(x=Mod_Relapse_month,fill=as.factor(Survival)))+
+  geom_histogram(position="dodge",bins=10)
 ```
 
 The distribution of survival months is quite normal, even though it's left skewed a little bit, which means that more observations than expected have short survival months. There are only 65 observations that has the relapse months data. The histogram shows that the data maybe follow a poission distribution with a small parameter $\lambda$.
@@ -123,6 +251,24 @@ p.surv
 
 ```{r}
 attach(kmpdf)
+survdiff(Surv(Survival_month,Survival)~ER+strata(PR)) 
+ggsurvplot(surv_fit(Surv(Survival_month,Survival)~ER+strata(PR),data=kmpdf),data=kmpdf[kmpdf$PR==1,],pval=TRUE)
+
+survdiff(Surv(Survival_month,Survival)~ER,data=kmpdf[kmpdf$PR==0,]) 
+ggsurvplot(surv_fit(Surv(Survival_month,Survival)~ER,data=kmpdf),data=kmpdf[kmpdf$PR==0,],pval=TRUE)
+
+survdiff(Surv(Survival_month,Survival)~ER,data=kmpdf[kmpdf$PR==1,]) 
+ggsurvplot(surv_fit(Surv(Survival_month,Survival)~ER,data=kmpdf),data=kmpdf[kmpdf$PR==1,],pval=TRUE)
+
+survdiff(Surv(Survival_month,Survival)~Menopause+strata(Age),data=kmpdf) 
+ggsurvplot(surv_fit(Surv(Survival_month,Survival)~Menopause+strata(Age),data=kmpdf),data=kmpdf,pval=TRUE)
+
+detach(kmpdf)
+```
+
+
+```{r}
+attach(kmpdf)
 survdiff(Surv(Survival_month,Survival)~ER+strata(Age)) 
 survdiff(Surv(Survival_month,Survival)~PR+strata(Age)) 
 ggsurvplot(surv_fit(Surv(Survival_month,Survival)~PR+strata(Age),data=kmpdf),data=kmpdf,pval=TRUE)
@@ -164,18 +310,31 @@ ggsurvplot(surv_fit(Surv(Survival_month,Survival)~Menopause+strata(Race),data=km
 detach(kmpdf)
 ```
 
-
-
 ## For relapse
 ```{r}
-surv.formula<-lapply(names(kmpdf)[2:9],function(x){as.formula(paste0("Surv(Relapse_month,Relapse) ~",x))})
+surv.formula<-lapply(names(kmpdf)[2:9],function(x){as.formula(paste0("Surv(Mod_Relapse_month,Mod_Relapse) ~",x))})
 relapse.fit<-surv_fit(surv.formula,data=kmpdf)
-p.relapse<-ggsurvplot(relapse.fit,data=kmpdf,pval=TRUE,risk.table = TRUE,
+p.relapse<-ggsurvplot(relapse.fit,data=kmpdf,pval=TRUE,
+                      #risk.table = TRUE,
                       ggtheme=theme_minimal(),
                       title=paste0("Relapse Curve by ",as.list(names(kmpdf)[2:9])),
                       xlab = "Time to Relapse (months)")
-#arrange_ggsurvplots(p.relapse[1:length(p.relapse)],print=TRUE,ncol =2,nrow=2)
+arrange_ggsurvplots(p.relapse[1:length(p.relapse)],print=TRUE,ncol =2,nrow=2)
 p.relapse
+```
+
+
+## For Mod relapse
+```{r}
+surv.formula<-lapply(names(kmpdf)[2:9],function(x){as.formula(paste0("Surv(Mod_Relapse_month,Mod_Relapse) ~",x))})
+relapse.fit<-surv_fit(surv.formula,data=kmpdf)
+p.mod.relapse<-ggsurvplot(relapse.fit,data=kmpdf,pval=TRUE,
+                      #risk.table = TRUE,
+                      ggtheme=theme_minimal(),
+                      title=paste0("Relapse Curve by ",as.list(names(kmpdf)[2:9])),
+                      xlab = "Time to Relapse (months)")
+arrange_ggsurvplots(p.mod.relapse[1:length(p.mod.relapse)],print=TRUE,ncol =2,nrow=2)
+p.mod.relapse
 ```
 
 How to deal with relapse data? 

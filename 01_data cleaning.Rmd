@@ -86,7 +86,7 @@ Delete observations that race are specified as "other". We only focus on "Black"
 Removing 18 observations whose Grade value is missing
 ```{r}
 bcdf<-bcdf[bcdf$Race!="Other",] # 341 observations, 17 variables
-bcdf<-bcdf[!is.na(bcdf$Grade),]
+bcdf<-bcdf[!is.na(bcdf$Grade),] 
 summary(bcdf[,-1])
 
 ```

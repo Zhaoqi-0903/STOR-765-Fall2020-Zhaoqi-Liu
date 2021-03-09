@@ -113,7 +113,7 @@ summary(surv.all)
 plot(surv.all,main="Plot of Survival Curve for Breast Cancer Patients",xlab= "Length of Survival", ylab= "Proportion of Individuals who have Survived")
 ```
 
-For the 341 people in the dataset, 97 people were uncensored(followed for the entire time, until occurence of event). Since the data has not yet dropped to 50% survival at the end of the available data, there is an NA value for median survival.
+For the 341 people in the dataset(keeps NA in the grade), 97 people were uncensored(followed for the entire time, until occurence of event). Since the data has not yet dropped to 50% survival at the end of the available data, there is an NA value for median survival.
 The following summary goes through each time point in the study in which an individual was lost to follow up or died and re-computes the total number of people still at risk (n.risk), the number of events at that time point (n.event), the proportion of individuals who survived up until that point (survival) and the standard error (std.err) and 95% confidence interval (lower 95% CI, upper 95% CI) for the proportion of individuals who survived at that point.
 This plot shows the survival curve (also known as a Kaplan-Meier plot), the proportion of individual who have survived up until that particular time as a solid black line and the 95% confidence interval (the dashed lines).
 
@@ -233,7 +233,8 @@ survdiff(Surv(survival_month,survival)~grade)
 
 #### stage
 0 means low stage, 1 means high stage.
-Lower grade cancers are typically less aggressive and have a better prognosis. The more abnormal the cells look and organize themselves, the higher the cancer's grade. Cancer cells with a high grades tend to be more aggressive.
+Lower stage cancers are typically less aggressive and have a better prognosis. 
+Breast cancer stage is usually expressed as a number on a scale of 0 through IV — with stage 0 describing non-invasive cancers that remain within their original location and stage IV describing invasive cancers that have spread outside the breast to other parts of the body.
 ```{r}
 surv.stage<-survfit(Surv(survival_month,survival)~stage)
 plot(surv.stage,col=c("blue","red"),ylim = c(0,1),
