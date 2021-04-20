@@ -170,10 +170,11 @@ ggsurvplot(surv_fit(Surv(Survival_month,Survival)~ER,data=kmpdf,group.by="Race")
 
 ### Stepwise variable selection
 ```{r}
+#forcing AveTCount in the model
 model.All.coxph<-coxph(Surv(Survival_month, Survival)~Race+Age+ER+PR+HER2+Grade+Stage+AveTCount+AveNCount+AveCMCount,data=bcdf)
 result.step<-step(model.All.coxph, 
                   scope = list(upper = ~Race+Age+ER+PR+HER2+Grade+Stage+AveTCount+AveCMCount+AveNCount, 
-                               lower = ~AveTCount)) #forcing AveTCount in the model 
+                               lower = ~AveTCount))  
 result.step 
 coxph(Surv(Survival_month, Survival)~Age+Grade+Stage+AveTCount,data=bcdf)
 ```
@@ -184,24 +185,35 @@ result.step<-step(model.All.coxph)
 result.step 
 ```
 
+```{r}
+ggforest(result.step)
+```
+
 
 forest plot for the Cox model with multiple variables 
 ```{r}
 #result.step 
-coef.est <- c(0.044207, NA, NA, NA,0, 0.433748, NA, NA, NA, 0, 0.605995, NA, NA,NA,0,1.200739, NA,0.841978)
-se.est <- c(0.007857, NA, NA,NA, 0, 0.283465, NA, NA, NA, 0, 0.230007,NA, NA, NA,0,0.225934,NA, 0.570057)
+coef.est <- c(0.044207, NA, NA,0, 0.433748, NA, NA, 0, 0.605995, NA,NA,0,1.200739, NA,0.841978)
+se.est <- c(0.007857, NA,NA, 0, 0.283465, NA, NA, 0, 0.230007, NA, NA,0,0.225934,NA, 0.570057)
 lower <- coef.est - 1.96*se.est
 upper <- coef.est + 1.96*se.est
-label.factors <- matrix(c(" Age","", "HER2","", " negative", " positive", "", "Grade", "",   "  low", " high", "", "Stage", "", "  low", " high", "", "AveNCount"), ncol=1)
+label.factors <- matrix(c(" Age","","", "HER2 negative", "HER2 positive", "", "",   "Grade low", "Grade high", "", "", "Stage  low", "Stage high", "", "LSR in nucleus"), ncol=1)
 ```
 
 ```{r}
 forestplot(label.factors, coef.est, lower=lower, upper=upper,
-boxsize=0.4, xticks=c(-0.5,0,0.5, 1, 1.5, 2),
-txt_gp=fpTxtGp(label=gpar(cex=1)), xlab="log hazard ratio",
+boxsize=0.4, xticks=c(-0.5,0,0.5,1,1.5, 2),
+txt_gp=fpTxtGp(label=gpar(cex=0.8), 
+               ticks = gpar(cex=0.8),
+               xlab=gpar(cex=0.8)), 
+xlab="log hazard ratio",
 col = fpColors(box = "royalblue",
                           line = "darkblue",
                           summary = "royalblue"))
+```
+
+```{r}
+
 ```
 
 
