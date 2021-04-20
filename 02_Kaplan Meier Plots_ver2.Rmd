@@ -5,11 +5,13 @@ date: "2/26/2021"
 output: pdf_document
 ---
 
-```{r}
+```{r,message=FALSE}
 library(dplyr)
 library(survival)
 library(survminer)
 library(patchwork)
+library(ggplot2) 
+library(cowplot)
 ```
 
 
@@ -75,6 +77,62 @@ head(kmpdf)
 
 ```
 
+density plot of LSR
+```{r}
+pd1<-ggplot(kmpdf, aes(x=AveNCount))+geom_density(fill="lightgrey",alpha=0.5)+labs(x="LSR in Nucleus")+scale_x_continuous(limits = c(0,2))+theme_bw()
+pd2<-ggplot(kmpdf, aes(x=AveCMCount))+geom_density(fill="lightgrey",alpha=0.5)+labs(x="LSR in Cytomembrane")+scale_x_continuous(limits = c(0,2))+theme_bw()
+plot_grid(pd1,pd2,align="h")
+```
+
+
+### relationship between race and LSR in nucleus 
+```{r}
+ggplot(kmpdf, aes(x=Race,y=AveNCount))+geom_boxplot()
+summary(aov(AveNCount~Race,data=kmpdf))
+oneway.test(AveNCount~Race,data=kmpdf)
+shapiro.test(residuals(aov(AveNCount~Race,data=kmpdf)))
+plot(aov(AveNCount~Race,data=kmpdf),2)
+ggplot(kmpdf, aes(x=Race,y=AveCMCount))+geom_boxplot()
+summary(aov(AveCMCount~Race,data=kmpdf))
+#t test -- since two groups 
+group_by(kmpdf, Race) %>%
+  summarise(
+    count = n(),
+    mean = mean(AveNCount, na.rm = TRUE),
+    sd = sd(AveNCount, na.rm = TRUE)
+)
+#f-test for homogeneity in variance
+res.ftest <- var.test(AveNCount ~ Race, data = kmpdf)
+res.ftest#no violence in homogeneity in variance 
+t.test(AveNCount ~ Race, data = kmpdf, var.equal = TRUE)
+
+
+ggplot(kmpdf, aes(x=ER,y=AveNCount))+geom_boxplot()
+summary(aov(AveNCount~ER,data=kmpdf))
+ggplot(kmpdf, aes(x=ER,y=AveCMCount))+geom_boxplot()
+summary(aov(AveCMCount~ER,data=kmpdf))
+par(mfrow=c(1,2))
+boxplot(AveNCount~Race,kmpdf,ylab="LSR in nucleus")
+boxplot(AveCMCount~Race,kmpdf,ylab="LSR in cytomembrane")
+boxplot(AveNCount~ER,kmpdf,ylab="LSR in nucleus")
+boxplot(AveCMCount~ER,kmpdf,ylab="LSR in cytomembrane")
+boxplot(AveNCount~PR,kmpdf,ylab="LSR in nucleus")
+boxplot(AveCMCount~PR,kmpdf,ylab="LSR in cytomembrane")
+
+#two-way ANOVA
+library(car)
+anova.nucleus.2way<-aov(AveNCount~Race+ER,data=kmpdf)
+Anova(anova.nucleus.2way,type="III")
+anova.cyto.2way<-aov(AveCMCount~Race+ER,data=kmpdf)
+Anova(anova.cyto.2way,type="III")
+ggboxplot(kmpdf,x="Race",y="AveNCount", color="ER",ylab="LSR in nucleus")
+ggboxplot(kmpdf,x="Race",y="AveCMCount", color="ER", ylab= "LSR in cytomembrane")
+table(kmpdf$Race,kmpdf$ER)
+shapiro.test(x = residuals(aov(AveNCount~Race+ER,data=kmpdf))) 
+#finds no indication that normality is violated.
+```
+
+In the plot below, there is no evident relationships between residuals and fitted values (the mean of each groups), which is good. So, we can assume the homogeneity of variances.
 
 Plot the Survival Time vs LSR 
 ```{r}
@@ -117,14 +175,14 @@ p7<-ggplot(kmpdf, aes(x =Mod_Relapse_month, y = AveTCount)) +
   geom_point(aes(color = as.factor(Survival)),cex=0.9) +
   scale_y_continuous(limits = c(0,3))+
   scale_x_continuous(limits = c(0,225))+
-  scale_color_discrete(name="Survival",labels=c("Yes","No"))+
+  scale_color_discrete(name="Event",labels=c("Yes","No"))+
   labs(title="AveTCount vs Modified Relapse Time by Survival Status" ,x = "Time in months")+theme_bw()
 p5/p6/p7
 
 p8<-ggplot(kmpdf, aes(x = AveTCount, y = Survival_month)) +
   geom_point(aes(color=as.factor(Survival)),cex=0.9)+
   scale_x_continuous(limits = c(0,3))+
-  scale_color_discrete(name="Survival",labels=c("Yes","No")) +
+  scale_color_discrete(labels=c("Survival","Death")) +
   labs(title = "AveTCount vs Survival Time by Survival Status", y="Time in months")+theme_bw()
 p9<-ggplot(kmpdf, aes(x =AveTCount,y = Relapse_month)) +
   geom_point(aes(color = as.factor(Survival)),cex=0.9) +
@@ -140,6 +198,23 @@ p10<-ggplot(kmpdf, aes(x= AveTCount, y =Mod_Relapse_month)) +
   labs(title="AveTCount vs Modified Relapse Time by Survival Status" ,y = "Time in months")+theme_bw()
 (p8|p9|p10)
 ```
+
+```{r}
+p5<-ggplot(kmpdf, aes(x =Survival_month, y = AveTCount)) +
+  geom_point(aes(color=as.factor(Survival)),cex=0.9)+
+  scale_y_continuous(limits = c(0,3))+
+  scale_color_discrete(name="Status",labels=c("Survived","Dead")) +
+  labs(title = "Total LSR and Survival Time", x="Time in months", y="Total LSR" )+theme_bw()
+p6<-ggplot(kmpdf, aes(x =Relapse_month, y = AveTCount)) +
+  geom_point(aes(color = as.factor(Survival)),cex=0.9) +
+  scale_y_continuous(limits = c(0,3))+
+  scale_x_continuous(limits = c(0,225))+
+  scale_color_discrete(name="Status",labels=c("Survived","Dead"))+
+  labs(title="Total LSR and Time to Relapse" ,x = "Time in months", y="Total LSR")+theme_bw()
+p5/p6
+```
+
+
 
 median survival time 
 ```{r}
@@ -164,6 +239,16 @@ plot(survfit(Surv(kmpdf$Relapse_month,kmpdf$Relapse)~1))
 survfit(Surv(kmpdf$Mod_Relapse_month,kmpdf$Mod_Relapse)~1)
 plot(survfit(Surv(kmpdf$Mod_Relapse_month,kmpdf$Mod_Relapse)~1))
 ```
+
+
+correlation plot 
+```{r}
+ggplot(aes(y=AveCMCount,x=AveNCount),data=kmpdf)+
+  labs(x="LSR in nucleus",y="LSR in cytomembrane")+
+  geom_point(cex=0.5)+
+  annotate(geom="text", x=0.75, y=0.25, label = "pearson correlation = 0.99")+theme_bw()
+```
+
 
 
 
@@ -239,12 +324,13 @@ survdiff(Surv(kmpdf$Survival_month,kmpdf$Survival)~kmpdf$Race)
 surv.formula<-lapply(names(kmpdf)[2:9],function(x){as.formula(paste0("Surv(Survival_month,Survival) ~",x))})
 surv.fit<-surv_fit(surv.formula,data=kmpdf)
 p.surv<-ggsurvplot(surv.fit,data=kmpdf,pval=TRUE, 
-                   #risk.table=TRUE,
+                   surv.median.line = "hv",
                    ggtheme=theme_minimal(),
               title=paste0("Survival Curve by ", as.list(names(kmpdf)[2:9])),
-              xlab = "Length of Survival (months)")
+              xlab = "Time in months")
 arrange_ggsurvplots(p.surv[1:length(p.surv)],print=TRUE,ncol =2,nrow=2)
-p.surv
+arrange_ggsurvplots(p.surv[1:4],print=TRUE,ncol =2,nrow=2)
+#p.surv
 ```
 
 ## stratified log-rank test 
@@ -340,6 +426,12 @@ p.mod.relapse
 How to deal with relapse data? 
 1. Change NA to be equal to the survival time if survival =0. If dead, change to relapse =1? Makes it be a RFS?
 2. Or use only the relapse data (no censoring, 65 patients) and do prentice modification of the Gehan-Wilcoxon test (put more weight on earlier survival). Since for example, the stage plot, low stage group (stage=0) shows a early survival advantage over the high-stage group
+
+
+linear model for relapse
+```{r}
+summary(lm(Relapse_month~Race+ER+AveCMCount,data=kmpdf))
+```
 
 
 
