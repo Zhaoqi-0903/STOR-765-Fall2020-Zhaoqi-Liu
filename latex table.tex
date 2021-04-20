@@ -1,0 +1,88 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{graphicx}
+\newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
+
+\title{STOR 893 Project Tables}
+\author{Zhaoqi Liu }
+\date{April 2021}
+
+
+\begin{document}
+
+\maketitle
+
+
+
+\begin{table}[h]
+%\centering  % centering table
+\begin{tabular}{l c c c c}  % creating 3 columns
+\hline\hline % inserting one line
+ & Group & n(\%) &Median Survival Time(months) & 95\% Confidence Interval 
+ \\ [0.5ex]   
+\hline             % inserts single-line
+% Entering 1st row 
+\multirow{2}{*}{Survival} 
+& \multicolumn{1}{l}{\hfil Censored} 
+& \multicolumn{1}{l}{\hfil232(71.8\%)}
+& \multicolumn{1}{l}{\hfil -}
+& \multicolumn{1}{l}{\hfil -}
+\\\cline{4-5}
+& \multicolumn{1}{l}{\hfil Death} 
+& \multicolumn{1}{l}{\hfil91(28.2\%)}
+& \multicolumn{1}{l}{\hfil63}
+& \multicolumn{1}{l}{\hfil[55,90]}
+\\\hline
+ & Group  & n(\%) &Median Time to Relapse(months) & 95\% Confidence Interval 
+\\\hline
+\multirow{2}{*}{Relapse} 
+& \multicolumn{1}{l}{\hfil Censored} 
+& \multicolumn{1}{l}{\hfil261(80.8\%)}
+& \multicolumn{1}{l}{\hfil -}
+& \multicolumn{1}{l}{\hfil -}
+\\\cline{4-5}
+& \multicolumn{1}{l}{\hfil Relapse} 
+& \multicolumn{1}{l}{\hfil62(19.2\%)}
+& \multicolumn{1}{l}{\hfil36.5}
+& \multicolumn{1}{l}{\hfil[21,54]}
+\\\hline
+\end{tabular}
+%\caption{Median Survival Time for Events and Censored Data} 
+\end{table}
+
+
+\begin{table}[]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{c|c|c|c|c|c}
+\hline\hline
+\multicolumn{1}{l|}{} & \multicolumn{1}{l|}{Coefficient} & \multicolumn{1}{l|}{SE} & \multicolumn{1}{l|}{Hazard Ratio} & \multicolumn{1}{l|}{Wald Test} & \multicolumn{1}{l}{P-value} \\ \hline
+Nucleus               & 0.97                             & 0.51                    & 2.64                              & 1.915                          & 0.055                       \\ \hline
+Cytomembrane          & 0.51                             & 0.25                    & 1.67                              & 2.019                          & 0.043                       \\ \hline
+Total                 & 0.33                             & 0.17                    & 1.40                              & 1.987                          & 0.047                       \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+% Please add the following required packages to your document preamble:
+% \usepackage{multirow}
+% \usepackage{graphicx}
+\begin{table}[]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l|c|c|c|c|c}
+\hline\hline
+                      & groups   & mean LSR in nucleus & p-value                            & mean LSR in cytomembrane & p-value                            \\ \hline
+\multirow{2}{*}{Race} & black    & 0.555               & \multirow{2}{*}{0.00537}           & 1.075                    & \multirow{2}{*}{0.0047}            \\ \cline{2-3} \cline{5-5}
+                      & white    & 0.477               &                                    & 0.921                    &                                    \\ \hline
+\multirow{2}{*}{ER}   & negative & 0.579               & \multirow{2}{*}{\textless{}0.0001} & 1.122                    & \multirow{2}{*}{\textless{}0.0001} \\ \cline{2-3} \cline{5-5}
+                      & positive & 0.465               &                                    & 0.587                    &                                    \\ \hline
+\multirow{2}{*}{PR}   & negative & 0.562               & \multirow{2}{*}{\textless{}0.0001} & 1.090                    & \multirow{2}{*}{\textless{}0.0001} \\ \cline{2-3} \cline{5-5}
+                      & positive & 0.459               &                                    & 0.884                    &                                    \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+\end{document}
